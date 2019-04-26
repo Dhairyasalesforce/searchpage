@@ -1,0 +1,881 @@
+<apex:page controller="SearchByTopicNameController" lightningStylesheets="false" standardStylesheets="true" showChat="false" showHeader="false" sidebar="false" showQuickActionVfHeader="false" docType="html-5.0">
+    
+    <apex:stylesheet value="{!$Resource.bootstrapcssCopy}"/>
+    <apex:includeScript value="{!$Resource.jquery}"/>
+    <apex:includeScript value="{!$Resource.bootstrap}"/>
+    <apex:includeScript value="{!$Resource.bootstraptree}"/>
+    <apex:includeScript value="{!$Resource.scroll}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS1051, 'styles/salesforce-lightning-design-system.min.css')}" />
+    <style>
+        .addColorCls{background-color: #428bca !important;color:white;}
+        .custRow{margin-right: 144px;margin-left: 144px;}
+        .search-result{background-color: #D9534F;color: white !important;}
+    </style>
+    <script>
+    
+    function saveToSFCon(n){
+        var newN = encodeURI(n);
+        console.log(newN);
+        saveToSFCon12(newN);
+    }
+    
+    function refereshTopPage(){
+        if ($.fn.DataTable.isDataTable("#example")) {
+            alert('destroy prev table');
+          $('#example').DataTable().clear().destroy();
+        }
+
+        $('#example').DataTable( {
+            dom: 'Bfrtip',
+            "retrive":true,
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf', 'print'
+            ]
+        } );
+    }
+    
+    function showSpinner(){
+        console.log('test');
+        $('.slds-spinner_container').removeClass('slds-hide');
+        $('.slds-spinner_container').addClass('slds-show');  
+        var winWidth = $(document).width();
+        var winHeight = $(document).height();
+        $('.slds-spinner_container').css({ 'width': winWidth,'height': winHeight });
+    }
+    
+    function hideSpinner(){                 
+        $('.slds-spinner_container').removeClass('slds-show');
+        $('.slds-spinner_container').addClass('slds-hide');    
+    }
+    
+    function checkDates(){
+        var availableAfterDate = $('[id*="availableAfter"]').val();
+        var availableBeforeDate = $('[id*="availableBefore"]').val();
+            
+        if(availableBeforeDate != '' && availableAfterDate != ''){
+            if(availableBeforeDate < availableAfterDate){
+                alert('Before Date should be equal or greater than After date.');    
+                $('[id*="availableBefore"]').val(availableAfterDate);
+            }
+        }
+    }
+    
+    
+    function disableSalDiv(){
+        var minSalary = $('[id*="minSalary"]').val();
+        var maxSalary = $('[id*="maxSalary"]').val();
+        var hourlyMinRate = $('[id*="hourlyMinRate"]').val();
+        var hourlyMaxRate = $('[id*="hourlyMaxRate"]').val();
+        
+        if(minSalary != '' || maxSalary != ''){
+            $('[id*="hourlyMinRate"]').prop('disabled', true);
+            $('[id*="hourlyMaxRate"]').prop('disabled', true);
+            
+            if(minSalary != '' && minSalary <= 0){
+                alert('Min Salary should be greater than 0.');
+                $('[id*="minSalary"]').val(1);
+            }
+            
+            if(maxSalary != '' && maxSalary <= 0){
+                alert('Max Salary should be greater than 0.');
+                $('[id*="maxSalary"]').val(1);
+            }
+        }
+        else{
+            $('[id*="hourlyMinRate"]').prop('disabled', false);
+            $('[id*="hourlyMaxRate"]').prop('disabled', false);
+        }
+        
+        if(hourlyMinRate != '' || hourlyMaxRate != ''){
+            $('[id*="minSalary"]').prop('disabled', true);
+            $('[id*="maxSalary"]').prop('disabled', true);
+            
+            if(hourlyMinRate != '' && hourlyMinRate <= 0){
+                alert('Hourly Min Rate should be greater than 0.');
+                $('[id*="hourlyMinRate"]').val(1);
+            }
+            
+            if(hourlyMaxRate != '' && hourlyMaxRate <= 0){
+                alert('Hourly Max Rate should be greater than 0.');
+                $('[id*="hourlyMaxRate"]').val(1);
+            }
+        }
+        else{
+            $('[id*="minSalary"]').prop('disabled', false);
+            $('[id*="maxSalary"]').prop('disabled', false);
+        }
+        
+        
+    }
+
+
+    function disableSearchFilter(){
+        var client = $('[id*=ccId]').val();
+         var candidate = $('[id*=candidateID]').val();
+
+        if((client == 'true' && candidate == 'false') || (client == 'true' && candidate == 'true')){
+            $('[id*="availableAfter"]').prop('disabled', true);
+            $('[id*="availableBefore"]').prop('disabled', true);
+            $('[id*="hourlyMinRate"]').prop('disabled', true);
+            $('[id*="hourlyMaxRate"]').prop('disabled', true);
+            $('[id*="minSalary"]').prop('disabled', true);
+            $('[id*="maxSalary"]').prop('disabled', true);
+
+        }
+        else{
+            $('[id*="availableAfter"]').prop('disabled', false);
+            $('[id*="availableBefore"]').prop('disabled', false);
+            $('[id*="hourlyMinRate"]').prop('disabled', false);
+            $('[id*="hourlyMaxRate"]').prop('disabled', false);
+            $('[id*="minSalary"]').prop('disabled', false);
+            $('[id*="maxSalary"]').prop('disabled', false);
+
+            disableSalDiv();
+        }
+    }
+
+    
+    
+    $( document ).ready(function() {
+        $('fixedTable').fixedHeaderTable({ 
+            footer: true,
+            cloneHeadToFoot: true,
+            autoShow: false
+        });     
+    });
+    </script>
+    <apex:outputPanel id="membJs">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css"></link>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.2/css/buttons.dataTables.min.css"></link>
+
+
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.flash.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.print.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $('#example').DataTable( {
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ]
+    } );
+    $('[id*=btn-add-cmp]').prop('disabled',true);
+} );
+
+   
+</script>
+</apex:outputPanel>
+
+<apex:form style="width: 72%;margin-left: 16%;margin-right: 16%;padding-top:  3%;color: darkblue;font-size: 14px;"> 
+    <apex:outputPanel style="font-weight: bold;font-size:15px;font-family:Salesforce Sans;">
+    </apex:outputPanel>
+    <h1 style="text-align:center; margin-top: 2%;color:  darkblue ;font-size: 22px;font-weight: bold;margin-left:29%;">SKILL-BASED CONTACT SEARCH</h1>
+    <apex:pageMessages ></apex:pageMessages>
+    <apex:actionStatus id="spinnerStatus" rendered="true" onstart="showSpinner();" onstop="hideSpinner();">
+        <apex:facet name="start">
+            <div class="slds-spinner_container slds-hide">
+                <div class="slds-spinner--brand slds-spinner slds-spinner--medium" aria-hidden="false" role="alert">
+                    <div class="slds-spinner__dot-a"></div>
+                    <div class="slds-spinner__dot-b"></div>
+                </div> 
+            </div>
+        </apex:facet>
+    </apex:actionStatus>
+    
+    <apex:actionFunction name="saveToSFCon12" action="{!saveToSFCon1}" reRender="test,membs,errorMsg" oncomplete="refereshTopPage();" status="spinnerStatus">
+        <apex:param name="p1" id="p1" value="" assignTo="{!topics}"/>
+    </apex:actionFunction>
+    <apex:actionFunction name="setRowNums" rerender="" action="{!displayRowNum}" status="spinnerStatus">
+            <apex:param name="firstParam" assignTo="{!rowNums}" value="" />
+        </apex:actionFunction>
+        <apex:actionFunction name="AddToCampaign" rerender="" action="{!AddToCampaign}" status="spinnerStatus" >
+          
+        </apex:actionFunction>
+    <apex:outputPanel id="test">
+    </apex:outputPanel>
+    <div id="testP">  
+        
+    </div>
+
+
+    <div style="margin-left:auto;margin-right:auto;overflow: hidden;" class="container">    
+        <div style="width:90%;margin-top:50px;">
+            <div style="height:5%; width:100%; overflow: hidden;">            
+            </div>
+            <!-- SEARCH PANEL -->
+            <div style="height:20%;overflow: hidden;">
+                <div style="float: left; width:10%;">                
+                </div>
+                <div>
+                    <apex:inputHidden value="{!onlyClients}" id="ccId"/> 
+                    <label style="font-size:18px;color: darkblue;">Only Clients </label><input type="checkbox" styleClass=".slds-checkbox" style="width:12px;height:12px;margin-left:2px;" onchange="document.getElementById('{!$Component.ccId}').value = this.checked; disableSearchFilter();" />
+                </div>
+                
+                <div>
+                    <apex:inputHidden value="{!onlyCandidates}" id="candidateID"/> 
+                    <label style="font-size:18px;color: darkblue;">Only Candidates</label><input type="checkbox" styleClass=".slds-checkbox" style="width:12px;height:12px;margin-left:2px;" onchange="document.getElementById('{!$Component.candidateID}').value = this.checked; disableSearchFilter();" />
+                </div>
+
+                <!-- Filter Panel Start  -->
+
+            <div style="height:70%;width:100%;overflow: hidden;margin-top:4%;border: 1px solid #ccc;padding:  2%;border-radius: 4px;margin-bottom:  1%;    box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);">
+                <div style="height: 200px;width:100%;">
+                    <span style="font-weight:bold">SEARCH FILTER</span>
+                   <!-- <div style="float:right;">
+                        <apex:commandButton value="Search" StyleClass="btn btn-primary saveArray" onclick="return false;" status="spinnerStatus" />
+                    </div> -->
+                    
+                    <table>
+                       
+                        <tr>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="date"> After Date </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="availableAfter" type="date" styleclass="slds-box slds-box_xx-small" value="{!availableAfter}" html-placeholder="After date" onchange="checkDates();"/> 
+                            </td>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="date"> Before Date </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="availableBefore" type="date" styleclass="slds-box slds-box_xx-small" value="{!availableBefore}" html-placeholder="Before date" onchange="checkDates();"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="salary"> Min Salary </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="minSalary" type="number" styleclass="slds-box slds-box_xx-small" value="{!minSalary}" html-placeholder="Min Salary" onchange="disableSalDiv();" /> 
+                            </td>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="salary"> Max Salary </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="maxSalary" type="number" styleclass="slds-box slds-box_xx-small" value="{!maxSalary}" html-placeholder="Max Salary" onchange="disableSalDiv();"/>
+                            </td>
+                        </tr> 
+                        <tr>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="Rate"> Hourly Min Rate </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="hourlyMinRate" type="number" styleclass="slds-box slds-box_xx-small" value="{!hourlyMinRate}" html-placeholder="Min Rate" onchange="disableSalDiv();"/> 
+                            </td>
+                            <td  class="slds-p-top_medium"><label class="slds-form-element__label" for="Rate"> Hourly Max Rate </label></td>
+                            <td class="slds-p-top_medium">
+                                <apex:input id="hourlyMaxRate" type="number" styleclass="slds-box slds-box_xx-small" value="{!hourlyMaxRate}" html-placeholder="Max Rate" onchange="disableSalDiv();"/>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                </div>  
+            </div>
+
+
+            <!-- Filter Panel End  -->
+                
+                <div style="float: left; width:100%;" class="slds-p-top_medium">
+                    <label for="input-select-node" class="sr-only">Search Tree:</label>
+                    <input type="input" class="form-control" id="input-select-node" placeholder="Search Skills (enter at least three character) ..." value="" style="width: 100%;height: 100%;"/>                                              
+                </div> 
+                <div style="float: right;">
+                   
+                </div>            
+            </div>
+            
+            
+
+            <!-- END SEARCH PANEL -->
+            <div style="height:70%;width:100%;overflow: hidden;margin-top:4%;border: 1px solid #ccc;padding:  2%;border-radius: 4px;margin-bottom:  1%;    box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);">
+                <div style="height: 300px;width:100%;overflow-y: scroll;">
+                    <div id="tableContainer" style="float: left; width:45%;">
+                        <span style="font-weight:bold">SKILLS</span>
+                        <div id="treeview-selectable" class="" style="font-size:100%;font-family: Arial,Helvetica,sans-serif;">
+                        </div>
+                    </div>
+                    <div style="float: right; width:45%;">
+                        <span style="font-weight:bold">SELECTED SKILLS</span>
+                        <div id="selectable-output" style="font-size:90%;font-family: Arial,Helvetica,sans-serif;"></div>
+                    </div>
+                    
+                </div>  
+            </div>
+        </div> 
+    </div>
+    
+ 
+    <apex:outputPanel id="errorMsg">
+        <apex:pageMessages id="showmsg" ></apex:pageMessages>
+    </apex:outputPanel>
+    
+    <div> 
+        <span style="font-weight:bold; text-align:right;margin-left:15%;">Enter Filter Criteria : </span>
+        <apex:inputText id="queryInput" style="width: 50%;margin-left:2%;marging-right:25%;margin-top:2%;border:1px solid #ccc;border-radius:4px;height:25px;" value="{!filterFormula}"/>
+    </div>
+    
+    <div>
+        <span style="text-align:right;margin-left:15%;color:#ccc">(Example: 1 OR 2 , (1 OR 2) AND 3 , etc...)</span>
+    </div>
+    
+    <div id="searchbutton">
+            
+            <apex:commandButton value="Search" StyleClass="btn btn-primary saveArray" style="height: 100%;padding-top: 5px;padding-bottom: 5px;padding-right: 10px;padding-left: 10px;color: darkblue;width:8%;margin-left: 48%;margin-top: 2%;" onclick="return false;" status="spinnerStatus" />
+    </div>
+
+    
+    <br/><br/><br/>
+    <apex:outputPanel id="membs" style="">
+        <apex:pageBlock >
+            
+
+            <apex:pageBlockButtons >
+                <script>
+                    var selectedCon = '{!JSENCODE(rowNums)}';
+                    if(selectedCon != null && selectedCon != ''){       
+                        $('[id*=btn-add-cmp]').prop('disabled',false);
+                    }else{        
+                        $('[id*=btn-add-cmp]').prop('disabled',true);
+                    }
+                </script>
+                    <apex:commandLink action="{!AddToCampaign}" target="_blank" status="spinnerStatus" style="margin-right:63%;">
+                        <apex:commandButton id="btn-add-cmp" styleClass="btn" value="Add to Campaign" style="color:darkblue;" status="spinnerStatus"/>
+                    </apex:commandLink>
+            </apex:pageBlockButtons>           
+
+            
+            
+            <table id="example" class="display" cellspacing="0" width="100%">
+                <thead style="color: darkblue;">
+                    <tr>
+                        <th></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Mobile Number</th> 
+                    </tr>
+                </thead>
+                <tbody>
+                    <apex:variable var="i" value="{!0}"/>
+                    <apex:repeat value="{!mapContact}" var="evntMem">
+                        <tr>
+                            <td><apex:inputCheckbox styleClass="cbBx" onclick="getRowNum('{!i}',this);"/> <apex:variable var="i" value="{!i+1}"/></td>
+                            <td><a href="/{!mapContact[evntMem].Id}" target="_blank">{!mapContact[evntMem].Name}</a></td>
+                            <td>{!mapContact[evntMem].Email}</td>
+                            <td>{!mapContact[evntMem].Phone}</td>
+                        </tr>
+                    </apex:repeat>
+                   
+                    
+                </tbody>
+            </table>
+           
+        </apex:pageBlock>
+        
+    </apex:outputPanel>
+</apex:form> 
+<script type="text/javascript">
+
+function TestAddToCampaign(){
+    alert('AddToCampaign');
+    AddToCampaign();
+}
+
+function selectedNodeNumb(n){    
+    var prentNode= $('#treeview-selectable').treeview('getNode', n);
+    console.debug('Gaurang: Parent Node Number ' + prentNode.parentId);
+    if((typeof prentNode != 'undefined') && (typeof prentNode.parentId != 'undefined') ) 
+    {
+        $('#treeview-selectable').treeview('expandNode', [ prentNode.parentId, { levels: 2, silent: true } ]);       
+    }                    
+    $("li.list-group-item[data-nodeid=\'"+n+"\']").click();
+}
+
+$(function() {
+    
+    var defaultData = {!result};
+    console.log(defaultData);
+    var alternateData = [
+        {
+            text: 'Parent 1',
+            tags: ['2'],
+            nodes: [
+                {
+                    text: 'Child 1',
+                    tags: ['3'],
+                    nodes: [
+                        {
+                            text: 'Grandchild 1',
+                            tags: ['6']
+                        },
+                        {
+                            text: 'Grandchild 2',
+                            tags: ['3']
+                        }
+                    ]
+                },
+                {
+                    text: 'Child 2',
+                    tags: ['3']
+                }
+            ]
+        },
+        {
+            text: 'Parent 2',
+            tags: ['7']
+        },
+        {
+            text: 'Parent 3',
+            icon: 'glyphicon glyphicon-earphone',
+            href: '#demo',
+            tags: ['11']
+        },
+        {
+            text: 'Parent 4',
+            icon: 'glyphicon glyphicon-cloud-download',
+            href: '/demo.html',
+            tags: ['19'],
+            selected: true
+        },
+        {
+            text: 'Parent 5',
+            icon: 'glyphicon glyphicon-certificate',
+            color: 'pink',
+            backColor: 'red',
+            href: 'http://www.tesco.com',
+            tags: ['available','0']
+        }
+    ];
+    
+    var json = '[' +
+        '{' +
+        '"text": "Parent 1",' +
+        '"nodes": [' +
+        '{' +
+        '"text": "Child 1",' +
+        '"nodes": [' +
+        '{' +
+        '"text": "Grandchild 1"' +
+        '},' +
+        '{' +
+        '"text": "Grandchild 2"' +
+        '}' +
+        ']' +
+        '},' +
+        '{' +
+        '"text": "Child 2"' +
+        '}' +
+        ']' +
+        '},' +
+        '{' +
+        '"text": "Parent 2"' +
+        '},' +
+        '{' +
+        '"text": "Parent 3"' +
+        '},' +
+        '{' +
+        '"text": "Parent 4"' +
+        '},' +
+        '{' +
+        '"text": "Parent 5"' +
+        '}' +
+        ']';
+    
+    
+    $('#treeview1').treeview({
+        data: defaultData
+    });
+    
+    $('#treeview2').treeview({
+        levels: 1,
+        data: defaultData
+    });
+    
+    $('#treeview3').treeview({
+        levels: 99,
+        data: defaultData
+    });
+    
+    $('#treeview4').treeview({
+        color: "#428bca",
+        data: defaultData
+    });
+    
+    $('#treeview5').treeview({
+        color: "#428bca",
+        expandIcon: 'glyphicon glyphicon-chevron-right',
+        collapseIcon: 'glyphicon glyphicon-chevron-down',
+        nodeIcon: 'glyphicon glyphicon-bookmark',
+        data: defaultData
+    });
+    
+    $('#treeview6').treeview({
+        color: "#428bca",
+        expandIcon: "glyphicon glyphicon-stop",
+        collapseIcon: "glyphicon glyphicon-unchecked",
+        nodeIcon: "glyphicon glyphicon-user",
+        showTags: true,
+        data: defaultData
+    });
+    
+    $('#treeview7').treeview({
+        color: "#428bca",
+        showBorder: false,
+        data: defaultData
+    });
+    
+    $('#treeview8').treeview({
+        expandIcon: "glyphicon glyphicon-stop",
+        collapseIcon: "glyphicon glyphicon-unchecked",
+        nodeIcon: "glyphicon glyphicon-user",
+        color: "yellow",
+        backColor: "purple",
+        onhoverColor: "orange",
+        borderColor: "red",
+        showBorder: false,
+        showTags: true,
+        highlightSelected: true,
+        selectedColor: "yellow",
+        selectedBackColor: "darkorange",
+        data: defaultData
+    });
+    
+    $('#treeview9').treeview({
+        expandIcon: "glyphicon glyphicon-stop",
+        collapseIcon: "glyphicon glyphicon-unchecked",
+        nodeIcon: "glyphicon glyphicon-user",
+        color: "yellow",
+        backColor: "purple",
+        onhoverColor: "orange",
+        borderColor: "red",
+        showBorder: false,
+        showTags: true,
+        highlightSelected: true,
+        selectedColor: "yellow",
+        selectedBackColor: "darkorange",
+        data: alternateData
+    });
+    
+    $('#treeview10').treeview({
+        color: "#428bca",
+        enableLinks: true,
+        data: defaultData
+    });
+    
+    var $searchableTree = $('#treeview-searchable').treeview({
+        data: defaultData,
+    });
+    
+    var search = function(e) {
+        var pattern = $('#input-search').val();
+        var options = {
+            ignoreCase: $('#chk-ignore-case').is(':checked'),
+            exactMatch: $('#chk-exact-match').is(':checked'),
+            revealResults: $('#chk-reveal-results').is(':checked')
+        };
+        var results = $searchableTree.treeview('search', [ pattern, options ]);
+        
+        var output = '<p>' + results.length + ' matches found</p>';
+        $.each(results, function (index, result) {
+            output += '<p>- ' + result.text + '</p>';
+        });
+        $('#search-output').html(output);
+    }
+    
+    $('#btn-search').on('click', search);
+    $('#input-search').on('keyup', search);
+    
+    $('#btn-clear-search').on('click', function (e) {
+        $searchableTree.treeview('clearSearch');
+        $('#input-search').val('');
+        $('#search-output').html('');
+    });
+    
+    var arr = new Array();
+    console.log('array'+arr);
+    var arr1 = new Array();
+    var map = {};
+    
+    function printSelectedArray(n,nodeNumb){         
+
+        var numb = nodeNumb;
+        var v= n.replace("&","And").replace(/\//g,"OrChar");
+        var s = v.replace(/ /g, "");
+        s = s.replace("&","");
+        if($.inArray(v, arr) !== -1){
+            var ind = arr.indexOf(v);
+            arr.splice(ind,1);
+            delete map[s];
+            $('li#'+s).removeClass('addColorCls');
+        }
+        else{
+            arr.push(v);
+            map[s] = numb ;
+            //$('li#'+v+' span').removeCSS('background-color');
+            $('li#'+s).addClass('addColorCls');
+            
+        }
+        arr.sort(); 
+        console.log('Len1== ' + arr.length );
+        
+        var selectedSkillsCount = arr.length;
+        if(selectedSkillsCount <= 10){
+        
+        document.getElementById('selectable-output').innerHTML = '';
+        //document.getElementById('selectable-output1').innerHTML = '';
+        
+        var htm = '<ul class="list-group">';
+        
+       
+        for (var i=0; i<arr.length; i++) {
+            var indNumb = arr[i].replace(/ /g, "").replace("&","");
+            var ns = map[indNumb];
+            htm = htm + '<li style="min-width:163px;" class="list-group-item addColorCls" onclick="selectedNodeNumb('+ns+');"><span>'+arr[i].replace("And","&").replace("OrChar","/")+'</span></li>'
+        }
+        htm = htm + '</ul>';
+        var htm1 = '<ol type="1">';
+       
+        var selectedCount = arr.length;
+        var tempQueryInput = " ";
+        if(selectedCount == 1){
+            tempQueryInput = "1 ";
+        }else if(selectedCount > 1){
+            tempQueryInput = "1 ";
+            for (var i=2; i<= arr.length; i++){
+                tempQueryInput = tempQueryInput + "AND "  + i + " ";
+            } 
+        }
+        $('input[id*=queryInput]').val(tempQueryInput);
+
+       
+        for (var i=0; i< arr.length; i++) {
+            var indNumb = arr[i].replace(/ /g, "").replace("&","");
+            var ns = map[indNumb];
+            htm1 = htm1 + '<li style="min-width:163px;color: darkblue;font-size: 16px;"><span>'+ arr[i].replace("And","&").replace("OrChar","/")+'</span></li>'
+            
+        }
+        
+        htm1 = htm1 + '</ol>';
+        $('#selectable-output').append(htm);
+        //$('#selectable-output1').append(htm1);
+        //console.log('#selectable-output1 --> ' + $('#selectable-output1')); 
+        }else{
+            alert('You can select upto 10 skills...');    
+        }
+    }
+    
+    $('.saveArray').on('click', function (e) {
+        var rslt = arr.join(';');
+        console.log('result:::::::'+rslt);
+        saveToSFCon(rslt);
+    });
+    
+    var initSelectableTree = function() {
+        return $('#treeview-selectable').treeview({
+            data: defaultData,
+            multiSelect: true,
+            
+            onNodeSelected: function(event, node) {
+                
+                printSelectedArray(node.text,node.nodeNumber);
+                var currentheight =  document.getElementById('tableContainer').scrollTop;
+                $('#tableContainer').stop().animate({ scrollTop: currentheight }, 2);
+                event.preventDefault();
+            },
+            onNodeUnselected: function (event, node) {
+                printSelectedArray(node.text,node.nodeNumber);
+                var currentheight =  document.getElementById('tableContainer').scrollTop;
+                $('#tableContainer').stop().animate({ scrollTop: currentheight }, 2);
+                event.preventDefault();
+            },
+            onNodeCollapsed: function(event, node) {
+                var currentheight =  document.getElementById('tableContainer').scrollTop;
+                $('#tableContainer').stop().animate({ scrollTop: currentheight }, 2);
+                event.preventDefault();
+            },
+            onNodeExpanded: function (event, node) {
+                var currentheight =  document.getElementById('tableContainer').scrollTop + 50;
+                $('#tableContainer').stop().animate({ scrollTop: currentheight }, 1);
+                event.preventDefault();
+            }
+        });
+    };
+    
+    var $selectableTree = initSelectableTree();
+    
+    var findSelectableNodes = function() {
+        return $selectableTree.treeview('search', [ $('#input-select-node').val(), { ignoreCase: true, exactMatch: false } ]);
+    };
+    var selectableNodes = findSelectableNodes();
+    
+    $('#chk-select-multi:checkbox').on('change', function () {
+        console.log('multi-select change');
+        $selectableTree = initSelectableTree();
+        selectableNodes = findSelectableNodes();          
+    });
+    
+    // Select/unselect/toggle nodes
+    $('#input-select-node').on('keyup', function (e) {
+        console.log($('#input-select-node'));
+        if($('#input-select-node').val().length >= 3) 
+        {
+            selectableNodes = findSelectableNodes();
+            $('.select-node').prop('disabled', !(selectableNodes.length >= 3));
+            var va = $('#input-select-node').val();
+            if(va !== '' && va !== NaN){
+                $('.node-treeview-selectable').css('display','none');
+                $('.search-result').css('display','block');
+            }
+            else{
+                $('.node-treeview-selectable').css('display','block');
+                $('#treeview-selectable').treeview('collapseAll', { silent: true });
+            }
+        }
+        else if($('#input-select-node').val().length == 0)
+        {
+            selectableNodes = findSelectableNodes();
+        }
+    });
+    
+    $('#btn-select-node.select-node').on('click', function (e) {
+        $selectableTree.treeview('selectNode', [ selectableNodes, { silent: $('#chk-select-silent').is(':checked') }]);
+        console.debug('Function called 1');
+    });
+    
+    $('#btn-unselect-node.select-node').on('click', function (e) {
+        $selectableTree.treeview('unselectNode', [ selectableNodes, { silent: $('#chk-select-silent').is(':checked') }]);
+    });
+    
+    $('#btn-toggle-selected.select-node').on('click', function (e) {
+        $selectableTree.treeview('toggleNodeSelected', [ selectableNodes, { silent: $('#chk-select-silent').is(':checked') }]);
+        console.debug('Function called 3');
+    });
+    
+    var $expandibleTree = $('#treeview-expandible').treeview({
+        data: defaultData,
+        onNodeCollapsed: function(event, node) {
+            $('#expandible-output').prepend('<p>' + node.text + ' was collapsed</p>');
+        },
+        onNodeExpanded: function (event, node) {
+            $('#expandible-output').prepend('<p>' + node.text + ' was expanded</p>');
+        }
+    });
+    
+    var findExpandibleNodess = function() {
+        return $expandibleTree.treeview('search', [ $('#input-expand-node').val(), { ignoreCase: false, exactMatch: false } ]);
+    };
+    var expandibleNodes = findExpandibleNodess();
+    
+    var $checkableTree = $('#treeview-checkable').treeview({
+        data: defaultData,
+        showIcon: false,
+        showCheckbox: true,
+        onNodeChecked: function(event, node) {
+            $('#checkable-output').prepend('<p>' + node.text + ' was checked</p>');
+            alert('Function called');
+        },
+        onNodeUnchecked: function (event, node) {
+            $('#checkable-output').prepend('<p>' + node.text + ' was unchecked</p>');
+        }
+    });
+    
+    var findCheckableNodess = function() {
+        return $checkableTree.treeview('search', [ $('#input-check-node').val(), { ignoreCase: false, exactMatch: false } ]);
+    };
+    var checkableNodes = findCheckableNodess();
+    
+    // Check/uncheck/toggle nodes
+    $('#input-check-node').on('keyup', function (e) {
+        checkableNodes = findCheckableNodess();
+        $('.check-node').prop('disabled', !(checkableNodes.length >= 1));
+    });
+    
+    $('#btn-check-node.check-node').on('click', function (e) {
+        $checkableTree.treeview('checkNode', [ checkableNodes, { silent: $('#chk-check-silent').is(':checked') }]);
+    });
+    
+    $('#btn-uncheck-node.check-node').on('click', function (e) {
+        $checkableTree.treeview('uncheckNode', [ checkableNodes, { silent: $('#chk-check-silent').is(':checked') }]);
+    });
+    
+    $('#btn-toggle-checked.check-node').on('click', function (e) {
+        $checkableTree.treeview('toggleNodeChecked', [ checkableNodes, { silent: $('#chk-check-silent').is(':checked') }]);
+    });
+    
+    // Check/uncheck all
+    $('#btn-check-all').on('click', function (e) {
+        $checkableTree.treeview('checkAll', { silent: $('#chk-check-silent').is(':checked') });
+    });
+    
+    $('#btn-uncheck-all').on('click', function (e) {
+        $checkableTree.treeview('uncheckAll', { silent: $('#chk-check-silent').is(':checked') });
+    });
+    
+    
+    var $disabledTree = $('#treeview-disabled').treeview({
+        data: defaultData,
+        onNodeDisabled: function(event, node) {
+            $('#disabled-output').prepend('<p>' + node.text + ' was disabled</p>');
+        },
+        onNodeEnabled: function (event, node) {
+            $('#disabled-output').prepend('<p>' + node.text + ' was enabled</p>');
+        },
+        onNodeCollapsed: function(event, node) {
+            $('#disabled-output').prepend('<p>' + node.text + ' was collapsed</p>');
+        },
+        onNodeUnchecked: function (event, node) {
+            $('#disabled-output').prepend('<p>' + node.text + ' was unchecked</p>');
+        },
+        onNodeUnselected: function (event, node) {
+            $('#disabled-output').prepend('<p>' + node.text + ' was unselected</p>');
+        }
+    });
+    
+    var findDisabledNodes = function() {
+        return $disabledTree.treeview('search', [ $('#input-disable-node').val(), { ignoreCase: false, exactMatch: false } ]);
+    };
+    
+    var disabledNodes = findDisabledNodes();
+    
+    $('.node-selected').each(function() {
+        var currentElement = $(this);
+        console.debug('selected element '+currentElement.text());
+        printSelectedArray(currentElement.text(),currentElement.data('nodeid'));
+    });
+    
+    $('#treeview-selectable').treeview('collapseAll', { silent: true});
+    $('#treeview-selectable').treeview('enableAll', { silent: true });
+});
+</script>
+<script>
+function checkProds(){
+    var allChckVals = document.getElementsByClassName('cbBx');
+    var unchckedNum = 0;
+    if(allChckVals.length > 0){
+        for(var i=0;i<allChckVals.length;i++){
+            if(allChckVals[i].checked == false){
+                unchckedNum++;
+            }
+        }
+        if(unchckedNum == allChckVals.length){
+            alert("Please select at least one Contact from the list.");
+            return false;
+        }
+    }
+}
+var allRowNum = new Array();
+function getRowNum(rowNo,isSelected){
+    if(isSelected.checked == true){
+        $('[id*=btn-add-cmp]').prop('disabled',false);
+        allRowNum.push(rowNo);
+    }else if(isSelected.checked == false && allRowNum.indexOf(rowNo) > -1){
+        var index = allRowNum.indexOf(rowNo);
+        allRowNum.splice(index, 1);
+    }
+    console.log(allRowNum);
+    if(allRowNum != null && allRowNum.length > 0){       
+        $('[id*=btn-add-cmp]').prop('disabled',false);
+    }else{        
+        $('[id*=btn-add-cmp]').prop('disabled',true);
+    }
+    setRowNums(allRowNum.join(','));
+    return false;
+}    
+</script>
+</apex:page>
